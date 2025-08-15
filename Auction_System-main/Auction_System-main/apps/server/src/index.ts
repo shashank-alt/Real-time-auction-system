@@ -698,29 +698,27 @@ function broadcast(data: string) {
   });
 }
 
+// Register SPA fallback before server starts to ensure Render route availability
+try {
+  app.get('/*', async (req, reply) => {
+    const url = (req as any).url as string
+    if (url.startsWith('/api') || url.startsWith('/health') || url.startsWith('/ws')) return reply.notFound()
+    if (typeof (reply as any).sendFile === 'function') {
+      return (reply as any).sendFile('index.html')
+    }
+    return reply.notFound()
+  })
+} catch {}
+
 await app.listen({ port: PORT, host: '0.0.0.0' });
 wss = new WebSocketServer({ server: app.server });
 wss.on('connection', (socket) => {
   socket.send(JSON.stringify({ type: 'hello', at: new Date().toISOString() }));
 });
 
-// Subscribe to cross-instance WS broadcast if Redis supports it
 try {
   await (redisForBids as any)?.subscribe?.('ws:broadcast', (message: string) => {
     broadcast(message)
-  })
-} catch {}
-
-// SPA fallback: serve index.html for unmatched GET routes (except API/health)
-try {
-  app.get('/*', async (req, reply) => {
-    const url = (req as any).url as string
-    if (url.startsWith('/api') || url.startsWith('/health') || url.startsWith('/ws')) return reply.notFound()
-    // fastify-static decorates reply with sendFile
-    if (typeof (reply as any).sendFile === 'function') {
-      return (reply as any).sendFile('index.html')
-    }
-    return reply.notFound()
   })
 } catch {}
 app.log.info(`Server listening on http://localhost:${PORT}`);
