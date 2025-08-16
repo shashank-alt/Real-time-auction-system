@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Extended theme surfaces */
+.surface {
+  @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl;
+}
+.card {
+  @apply bg-white dark:bg-zinc-800/80 backdrop-blur border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-md;
+}
+.glass {
+  @apply bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md border border-zinc-200 dark:border-zinc-800;
+}
+
+/* Animations */
+@keyframes flash-green { 0% { background-color: rgba(34,197,94,.25);} 100% { background-color: transparent;} }
+.flash-green { animation: flash-green 800ms ease-out; }
+
 /* App base styles */
 html, body, #root {
   height: 100%;

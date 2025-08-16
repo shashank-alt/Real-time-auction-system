@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import toast from 'react-hot-toast'
 import { createClient } from '@supabase/supabase-js'
 import { api, WS_URL } from '../lib/net'
 // New modular components (redesigned UI)
 import { Navbar } from '../components/Navbar'
+import { Layout } from '../components/Layout'
+import { SidebarNav } from '../components/SidebarNav'
 import { AuthForm as AuthPage } from '../components/AuthForm'
 import { AuctionCard } from '../components/AuctionCard'
 import { AdminDashboard as AdminPage } from '../components/AdminDashboard'
 import { NotificationsPanel } from '../components/NotificationsPanel'
 import { Brand } from '../components/Brand'
 import { TimeProvider } from '../providers/TimeProvider'
+import { ToasterPortal } from '../components/ToasterPortal'
 
 // Local lightweight context replacement removed; future: lift to provider if needed
 let sb: ReturnType<typeof createClient> | null = null as any
@@ -45,6 +49,8 @@ export function App() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [notifyOpen, setNotifyOpen] = useState(false)
   const [adminAuctions, setAdminAuctions] = useState<any[]>([])
+  const [openAuctionId, setOpenAuctionId] = useState<string | null>(null)
+  const openAuction = items.find(i => i.id === openAuctionId) || adminAuctions.find(i => i.id === openAuctionId)
 
   const authHeaders = useMemo(() => {
     const headers: Record<string, string> = { 'content-type': 'application/json' }
@@ -194,18 +200,23 @@ export function App() {
   const wsRef = useRef<WebSocket | null>(null)
   useEffect(() => {
     const ws = new WebSocket(WS_URL)
-    ws.onmessage = async (ev) => {
+  ws.onmessage = async (ev) => {
       const msg = JSON.parse(ev.data)
       if (msg.type === 'bid:accepted') {
         setItems((prev) => prev.map((a) => a.id === msg.auctionId ? { ...a, currentPrice: msg.amount } : a))
+    toast.custom((t) => <div className="px-4 py-3 bg-white dark:bg-zinc-800 rounded-lg shadow border border-zinc-200 dark:border-zinc-700 text-sm">New highest bid: <span className="font-semibold">${msg.amount}</span></div>)
       } else if (msg.type === 'auction:ended') {
         setItems((prev) => prev.map((a) => a.id === msg.auctionId ? { ...a, status: 'ended' } : a))
+    toast('Auction ended', { icon: '⌛' })
       } else if (msg.type === 'auction:accepted') {
         setItems((prev) => prev.map((a) => a.id === msg.auctionId ? { ...a, status: 'closed', winnerId: msg.winnerId, currentPrice: msg.amount } : a))
+    toast.success('Auction accepted & closed')
       } else if (msg.type === 'auction:rejected') {
         setItems((prev) => prev.map((a) => a.id === msg.auctionId ? { ...a, status: 'closed' } : a))
+    toast.error('Auction rejected by seller')
       } else if (msg.type === 'offer:accepted') {
         setItems((prev) => prev.map((a) => a.id === msg.auctionId ? { ...a, status: 'closed', currentPrice: msg.amount } : a))
+    toast.success('Counter-offer accepted')
       } else if (msg.type === 'notify') {
         // In-app notifications; only keep recent 20
         setNotifications((list) => {
@@ -214,6 +225,7 @@ export function App() {
           const next = [{ id: Math.random().toString(36).slice(2), ...msg.payload, at: msg.at }, ...list]
           return next.slice(0, 20)
         })
+    if (msg.payload?.type === 'outbid') toast('You have been outbid', { icon: '⚠️' })
       }
     }
     wsRef.current = ws
@@ -290,12 +302,22 @@ export function App() {
     )
   }
 
+  const sidebar = (
+    <SidebarNav
+      items={[
+        { label: 'Live Auctions', onClick: () => setPage('live'), active: page === 'live' },
+        session ? { label: 'Host Dashboard', onClick: () => setPage('admin'), active: page === 'admin' } : { label: 'Sign In', onClick: () => setPage('auth'), active: page === 'auth' },
+      ].filter(Boolean) as any}
+      footer={<div>BidSphere © {new Date().getFullYear()}</div>}
+    />
+  )
+
   return (
     <TimeProvider>
-  <div className="min-h-screen flex flex-col">
+  <ToasterPortal />
+  <Layout sidebar={sidebar}>
       <Navbar session={session} me={me} page={page} setPage={setPage} signOut={signOut} notifications={notifications} onOpen={() => setNotifyOpen((v) => !v)} />
-      
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-8 w-full">
         {page === 'live' ? (
           <div>
             <div className="mb-8">
@@ -328,7 +350,7 @@ export function App() {
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {visible.map((a) => (
-                    <AuctionCard key={a.id} a={a} placeBid={placeBid} currentUserId={session?.user?.id || null} />
+                    <AuctionCard key={a.id} a={a} placeBid={placeBid} currentUserId={session?.user?.id || null} onOpen={(id) => setOpenAuctionId(id)} />
                   ))}
                 </div>
               )
@@ -424,8 +446,59 @@ export function App() {
             )}
           </div>
         )}
-    </main>
-  </div>
+      </main>
+      {openAuction && (
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="relative bg-white dark:bg-zinc-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+            <button onClick={() => setOpenAuctionId(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500" aria-label="Close auction room">✕</button>
+            <div className="grid md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-800">
+              <div className="p-6 space-y-4 md:col-span-1">
+                <div className="aspect-video rounded-lg bg-gradient-to-br from-indigo-200 via-fuchsia-200 to-pink-100 dark:from-indigo-700/30 dark:via-fuchsia-700/20 dark:to-pink-700/10 flex items-center justify-center text-4xl font-bold text-indigo-600 dark:text-indigo-300">
+                  {(openAuction.title || '?')[0]?.toUpperCase()}
+                </div>
+                <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">{openAuction.title}</h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">{openAuction.description || 'No description'}</p>
+                <div className="text-xs text-zinc-500">Auction ID: {openAuction.id}</div>
+              </div>
+              <div className="p-6 space-y-6 md:col-span-1">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">Current Bid</div>
+                  <div className="text-4xl font-bold text-zinc-900 dark:text-white tabular-nums">${Number(openAuction.currentPrice).toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Place Bid</div>
+                  <form onSubmit={(e) => { e.preventDefault(); const input = (e.currentTarget.elements.namedItem('amount') as HTMLInputElement); const v = Number(input.value); if (!isNaN(v) && v > Number(openAuction.currentPrice)) placeBid(openAuction.id, v) }} className="space-y-3">
+                    <input name="amount" type="number" min={Number(openAuction.currentPrice) + Number(openAuction.bidIncrement || 1)} defaultValue={Number(openAuction.currentPrice) + Number(openAuction.bidIncrement || 1)} className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => placeBid(openAuction.id, Number(openAuction.currentPrice) + Number(openAuction.bidIncrement || 1))} className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">+Inc</button>
+                      <button type="button" onClick={() => placeBid(openAuction.id, Number(openAuction.currentPrice) + 5)} className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">+5</button>
+                      <button type="submit" className="flex-1 px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-sm">Bid</button>
+                    </div>
+                  </form>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                  {/* Placeholder for bid history - backend call untouched, would need a dedicated fetch. */}
+                  <div className="text-xs text-zinc-500">Bid history will display here.</div>
+                </div>
+              </div>
+              <div className="p-6 space-y-4 md:col-span-1">
+                <div className="text-xs uppercase tracking-wide text-zinc-500">Notifications</div>
+                <div className="space-y-2 max-h-72 overflow-auto pr-1 text-sm">
+                  {notifications.slice(0,10).map(n => (
+                    <div key={n.id} className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700">
+                      <div className="font-medium text-zinc-800 dark:text-zinc-200">{n.type}</div>
+                      {n.amount && (<div className="text-zinc-600 dark:text-zinc-400">${Number(n.amount).toFixed(2)}</div>)}
+                      <div className="text-xs text-zinc-500">{new Date(n.at || Date.now()).toLocaleTimeString()}</div>
+                    </div>
+                  ))}
+                  {notifications.length === 0 && (<div className="text-xs text-zinc-500">No notifications yet.</div>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
   </TimeProvider>
   )
 }
