@@ -299,8 +299,8 @@ export function App() {
         {page === 'live' ? (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Live Auctions</h2>
-              <p className="text-slate-600">Bid on exciting items from around the world</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">Live Auctions on <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500">BidSphere</span></h2>
+              <p className="text-slate-600 dark:text-slate-400">Where every bid counts, in real-time.</p>
               <div className="mt-4">
                 <button
                   onClick={() => setShowListings((s) => !s)}
@@ -351,8 +351,8 @@ export function App() {
         ) : page === 'admin' ? (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Host Dashboard</h2>
-              <p className="text-slate-600">Create and manage your auctions</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">Host Dashboard</h2>
+              <p className="text-slate-600 dark:text-slate-400">Create and manage your BidSphere auctions</p>
             </div>
             <AdminPage
               authHeaders={authHeaders}

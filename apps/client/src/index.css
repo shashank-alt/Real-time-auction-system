@@ -8,9 +8,20 @@ html, body, #root {
 }
 
 body {
-  /* Tailwind utility via @apply */
   /* eslint-disable-next-line */
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-slate-50 text-slate-900 transition-colors duration-300 ease-in-out;
+}
+body.dark {
+  /* eslint-disable-next-line */
+  @apply bg-slate-900 text-slate-100;
+}
+
+.surface {
+  @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700;
+}
+
+.card {
+  @apply surface rounded-xl shadow-lg hover:shadow-xl transition-shadow;
 }
 
 /* Simple button styles */
