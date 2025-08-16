@@ -9,11 +9,11 @@ html, body, #root {
 
 body {
   /* eslint-disable-next-line */
-  @apply bg-slate-50 text-slate-900 transition-colors duration-300 ease-in-out;
+  @apply bg-emerald-50 text-slate-900 transition-colors duration-300 ease-in-out;
 }
 body.dark {
   /* eslint-disable-next-line */
-  @apply bg-slate-900 text-slate-100;
+  @apply bg-zinc-900 text-zinc-100;
 }
 
 .surface {

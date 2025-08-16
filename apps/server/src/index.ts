@@ -192,7 +192,8 @@ app.get('/api/auctions', async (req) => {
     bidIncrement: Number(r.bidIncrement),
     goLiveAt: new Date(r.goLiveAt).toISOString(),
     endsAt: new Date(r.endsAt).toISOString(),
-    createdAt: new Date(r.createdAt).toISOString()
+  createdAt: new Date(r.createdAt).toISOString(),
+  sellerId: r.sellerId
   }))
   return { items: list };
 });
@@ -467,6 +468,8 @@ app.post('/api/auctions/:id/bids', async (req, reply) => {
   // Load auction row first
   const row = await AuctionModel.findByPk(id)
   if (!row) return reply.notFound('Auction not found')
+  // Prevent seller from bidding on own auction
+  if (row.sellerId === userId) return reply.forbidden('Seller cannot bid on own auction')
 
   let current = Number(row.currentPrice)
   let step = Number(row.bidIncrement)

@@ -292,7 +292,7 @@ export function App() {
 
   return (
     <TimeProvider>
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+  <div className="min-h-screen flex flex-col">
       <Navbar session={session} me={me} page={page} setPage={setPage} signOut={signOut} notifications={notifications} onOpen={() => setNotifyOpen((v) => !v)} />
       
       <main className="max-w-6xl mx-auto px-6 py-8">
@@ -328,7 +328,7 @@ export function App() {
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {visible.map((a) => (
-                    <AuctionCard key={a.id} a={a} placeBid={placeBid} />
+                    <AuctionCard key={a.id} a={a} placeBid={placeBid} currentUserId={session?.user?.id || null} />
                   ))}
                 </div>
               )

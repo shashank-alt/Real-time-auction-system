@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useCountdown } from '../hooks/useCountdown'
 import { api } from '../lib/net'
 
-export function AuctionCard({ a, placeBid }: { a: any; placeBid: (id: string, amount: number) => Promise<void> }) {
+export function AuctionCard({ a, placeBid, currentUserId }: { a: any; placeBid: (id: string, amount: number) => Promise<void>; currentUserId?: string | null }) {
   const { h, m, s, done } = useCountdown(a.endsAt)
   const [custom, setCustom] = useState<string>('')
   const status = String(a.status || '').toLowerCase()
@@ -47,7 +47,7 @@ export function AuctionCard({ a, placeBid }: { a: any; placeBid: (id: string, am
               ${Number(a.currentPrice).toFixed(2)}
             </span>
           </div>
-          {(!isEnded && !isClosed) && (
+          {(!isEnded && !isClosed && currentUserId !== a.sellerId) && (
             <div className="text-center">
               <div className="text-sm text-slate-600 mb-2">Ends in {h}h {m}m {s}s</div>
               <div className="flex gap-2 items-center">
@@ -59,6 +59,9 @@ export function AuctionCard({ a, placeBid }: { a: any; placeBid: (id: string, am
             </div>
           )}
           {isEnded && !isClosed && (<div className="text-center text-sm text-slate-600">Auction ended. Awaiting seller decision.</div>)}
+          {(!isEnded && !isClosed && currentUserId === a.sellerId) && (
+            <div className="text-center text-xs text-amber-600 font-medium">You are the seller; bidding disabled.</div>
+          )}
           {isClosed && (<div className="text-center text-sm text-purple-700 font-medium">Sold! {winnerAmt ? `Winner paid $${winnerAmt.toFixed(2)}` : 'Finalized.'}</div>)}
         </div>
       </div>
